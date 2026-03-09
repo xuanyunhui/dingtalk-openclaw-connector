@@ -3278,24 +3278,16 @@ const dingtalkPlugin = {
       const rt = getRuntime();
       rt.channel.activity.record('dingtalk-connector', account.accountId, 'start');
 
-      let stopped = false;
-      if (abortSignal) {
-        abortSignal.addEventListener('abort', () => {
-          if (stopped) return;
-          stopped = true;
-          ctx.log?.info(`[${account.accountId}] 停止钉钉 Stream 客户端...`);
-          rt.channel.activity.record('dingtalk-connector', account.accountId, 'stop');
-        });
-      }
-
-      return {
-        stop: () => {
-          if (stopped) return;
-          stopped = true;
-          ctx.log?.info(`[${account.accountId}] 钉钉 Channel 已停止`);
-          rt.channel.activity.record('dingtalk-connector', account.accountId, 'stop');
-        },
-      };
+      // 保持 startAccount Promise pending，防止框架误判为 account 退出而触发 auto-restart
+      await new Promise<void>((resolve) => {
+        if (abortSignal) {
+          abortSignal.addEventListener('abort', () => {
+            ctx.log?.info(`[${account.accountId}] 停止钉钉 Stream 客户端...`);
+            rt.channel.activity.record('dingtalk-connector', account.accountId, 'stop');
+            resolve();
+          });
+        }
+      });
     },
   },
   status: {
