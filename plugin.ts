@@ -2372,6 +2372,23 @@ async function handleDingTalkMessage(params: {
     systemPrompts.push(dingtalkConfig.systemPrompt);
   }
 
+  // 注入会话上下文信息（群组ID、会话类型等），让 agent 能够使用 outbound.sendText 主动发消息
+  const channelContext: string[] = [
+    `[DingTalk Channel Context]`,
+    `- accountId: ${accountId}`,
+    `- conversationType: ${isDirect ? '1:1 direct message' : 'group chat'}`,
+  ];
+  if (!isDirect && data.conversationId) {
+    channelContext.push(`- openConversationId: ${data.conversationId}`);
+    channelContext.push(`- To send a message to this group, use outbound.sendText with to="group:${data.conversationId}"`);
+  }
+  if (isDirect) {
+    channelContext.push(`- senderId: ${data.senderStaffId || data.senderId}`);
+    channelContext.push(`- To send a message to this user, use outbound.sendText with to="user:${data.senderStaffId || data.senderId}"`);
+  }
+  channelContext.push(`- senderNick: ${data.senderNick || 'unknown'}`);
+  systemPrompts.push(channelContext.join('\n'));
+
   // ===== 图片下载到本地文件（用于 OpenClaw AgentMediaPayload） =====
   const imageLocalPaths: string[] = [];
 
