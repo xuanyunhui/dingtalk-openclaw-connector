@@ -20,6 +20,7 @@ export const id = 'dingtalk-connector';
 const DEFAULT_ACCOUNT_ID = '__default__';
 
 let runtime: PluginRuntime | null = null;
+let gatewayPort: number | null = null;
 
 function getRuntime(): PluginRuntime {
   if (!runtime) throw new Error('DingTalk runtime not initialized');
@@ -1202,7 +1203,7 @@ interface GatewayOptions {
 async function* streamFromGateway(options: GatewayOptions, accountId: string): AsyncGenerator<string, void, unknown> {
   const { userContent, systemPrompts, sessionKey, gatewayAuth, imageLocalPaths, log } = options;
   const rt = getRuntime();
-  const gatewayUrl = `http://127.0.0.1:${rt.gateway?.port || 18789}/v1/chat/completions`;
+  const gatewayUrl = `http://127.0.0.1:${gatewayPort || 18789}/v1/chat/completions`;
 
   const messages: any[] = [];
   for (const prompt of systemPrompts) {
@@ -3326,6 +3327,9 @@ const plugin = {
   register(api: ClawdbotPluginApi) {
     runtime = api.runtime;
     api.registerChannel({ plugin: dingtalkPlugin });
+
+    // 从配置中读取 gateway port
+    gatewayPort = (api.config as any).gateway?.port ?? null;
 
     // ===== Gateway Methods =====
 
